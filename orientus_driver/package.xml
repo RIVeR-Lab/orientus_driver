@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <name>orientus_driver</name>
+  <version>0.0.0</version>
+  <description>Driver for Orientus IMU</description>
+  <maintainer email="mwills@wpi.edu">Mitchell Wills</maintainer>
+  <author>Nick Otero</author>
+  <author>Mitchell Wills</author>
+  <url>http://wiki.ros.org/orientus_driver</url>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>orientus_sdk_c</build_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>orientus_sdk_c</run_depend>
+</package>
