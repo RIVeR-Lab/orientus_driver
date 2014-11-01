@@ -14,8 +14,10 @@
   <build_depend>sensor_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>orientus_sdk_c</build_depend>
+  <build_depend>diagnostic_updater</build_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>geometry_msgs</run_depend>
   <run_depend>orientus_sdk_c</run_depend>
+  <run_depend>diagnostic_updater</run_depend>
 </package>

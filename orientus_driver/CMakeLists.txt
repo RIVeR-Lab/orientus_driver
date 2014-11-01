@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   orientus_sdk_c
+  diagnostic_updater
 )
 
 ###################################
@@ -22,7 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS geometry_msgs roscpp sensor_msgs orientus_sdk_c
+  CATKIN_DEPENDS geometry_msgs roscpp sensor_msgs orientus_sdk_c diagnostic_updater
 )
 
 ###########
