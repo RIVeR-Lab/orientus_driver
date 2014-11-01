@@ -2,7 +2,7 @@
 Changelog for package orientus_driver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.1 (2014-11-01)
+------------------
 * Inital version of orientus node
 * Contributors: Mitchell Wills
