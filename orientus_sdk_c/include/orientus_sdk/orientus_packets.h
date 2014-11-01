@@ -577,6 +577,9 @@ an_packet_t *encode_magnetic_calibration_configuration_packet(magnetic_calibrati
 int decode_magnetic_calibration_status_packet(magnetic_calibration_status_packet_t *magnetic_calibration_status_packet, an_packet_t *an_packet);
 an_packet_t *encode_zero_alignment_packet(zero_alignment_packet_t *zero_alignment_packet);
 
+
+int decode_acceleration_packet(acceleration_packet_t *acceleration_packet, an_packet_t *an_packet);
+
 #ifdef __cplusplus
 }
 #endif

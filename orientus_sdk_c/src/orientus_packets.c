@@ -612,3 +612,17 @@ an_packet_t *encode_zero_alignment_packet(zero_alignment_packet_t *zero_alignmen
 	}
 	return an_packet;
 }
+
+
+
+
+int decode_acceleration_packet(acceleration_packet_t *acceleration_packet, an_packet_t *an_packet)
+{
+  if(an_packet->id == packet_id_acceleration && an_packet->length == 12)
+    {
+      memcpy(&acceleration_packet->acceleration[0], &an_packet->data[0], 3*sizeof(float));
+      return 0;
+
+    }
+  else return 1;
+}
