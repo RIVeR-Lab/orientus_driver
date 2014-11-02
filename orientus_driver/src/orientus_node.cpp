@@ -5,8 +5,8 @@
 
 #include <boost/asio.hpp>
 
-#include "orientus_sdk/an_packet_protocol.h"
-#include "orientus_sdk/orientus_packets.h"
+#include "orientus_sdk_c/an_packet_protocol.h"
+#include "orientus_sdk_c/orientus_packets.h"
 
 #include "ros/ros.h"
 #include "sensor_msgs/Imu.h"

@@ -26,7 +26,7 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(include/orientus_sdk include/orientus_sdk/rs232)
+include_directories(include/orientus_sdk_c include/orientus_sdk_c/rs232)
 
 ## Declare a library
 add_library(orientus_sdk_c
@@ -58,8 +58,8 @@ install(TARGETS orientus_sdk_c orientus_sdk_c_rs232 packet_example
 )
 
 ## Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+install(DIRECTORY include/
+  DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
 )
 
