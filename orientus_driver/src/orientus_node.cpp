@@ -10,6 +10,8 @@
 
 #include "ros/ros.h"
 #include "sensor_msgs/Imu.h"
+#include "sensor_msgs/MagneticField.h"
+#include "sensor_msgs/Temperature.h"
 #include "geometry_msgs/Quaternion.h"
 #include "diagnostic_updater/diagnostic_updater.h"
 #include "diagnostic_updater/DiagnosticStatusWrapper.h"
@@ -21,6 +23,9 @@ private:
   ros::Rate loop_rate_;
   std::string frame_id_;
   ros::Publisher imu_pub_;
+  ros::Publisher imu_raw_pub_;
+  ros::Publisher magnetic_field_pub_;
+  ros::Publisher temperature_pub_;
   diagnostic_updater::Updater diagnostic_;
 
   boost::asio::io_service io_service_;
@@ -32,12 +37,16 @@ private:
   acceleration_packet_t acceleration_packet_;
   quaternion_orientation_packet_t quaternion_packet_;
   angular_velocity_packet_t angular_velocity_packet_;
+  raw_sensors_packet_t raw_sensors_packet_;
   status_packet_t status_packet_;
+  running_time_packet_t running_time_packet_;
   bool quaternion_orientation_std_received_;
   bool quaternion_orientation_received_;
   bool acceleration_received_;
   bool angular_velocity_received_;
+  bool raw_sensors_received_;
   bool status_received_;
+  bool running_time_received_;
 
 public:
   OrientusNode(ros::NodeHandle nh, ros::NodeHandle pnh)
@@ -69,16 +78,23 @@ public:
     packet_periods_packet.packet_periods[2].period = 20; // 50 Hz
     packet_periods_packet.packet_periods[3].packet_id = packet_id_angular_velocity;
     packet_periods_packet.packet_periods[3].period = 20; // 50 Hz
+    packet_periods_packet.packet_periods[4].packet_id = packet_id_raw_sensors;
+    packet_periods_packet.packet_periods[4].period = 20; // 50 Hz
 
-    packet_periods_packet.packet_periods[4].packet_id = packet_id_status;
-    packet_periods_packet.packet_periods[4].period = 200; // 5 Hz
+    packet_periods_packet.packet_periods[5].packet_id = packet_id_status;
+    packet_periods_packet.packet_periods[5].period = 200; // 5 Hz
+    packet_periods_packet.packet_periods[6].packet_id = packet_id_running_time;
+    packet_periods_packet.packet_periods[6].period = 200; // 5 Hz
 
-    packet_periods_packet.packet_periods[5].packet_id = 0;
+    packet_periods_packet.packet_periods[7].packet_id = 0;
     an_packet = encode_packet_periods_packet(&packet_periods_packet);
     an_packet_encode_and_send(an_packet);
     an_packet_free(&an_packet);
 
     imu_pub_ = nh.advertise<sensor_msgs::Imu>("imu/data", 10);
+    imu_raw_pub_ = nh.advertise<sensor_msgs::Imu>("imu/raw", 10);
+    magnetic_field_pub_ = nh.advertise<sensor_msgs::MagneticField>("imu/mag", 10);
+    temperature_pub_ = nh.advertise<sensor_msgs::Temperature>("imu/temp", 10);
 
     diagnostic_.setHardwareID("orientus");
     diagnostic_.add("IMU Status", this, &OrientusNode::deviceStatus);
@@ -94,24 +110,32 @@ public:
     quaternion_orientation_std_received_ = false;
     quaternion_orientation_received_ = false;
     acceleration_received_ = false;
-    angular_velocity_received_ = false;
+    raw_sensors_received_ = false;
     status_received_ = false;
+    running_time_received_ = false;
   }
   void spin() {
     while (ros::ok()) {
       while(receive_next_packet()){
 	if(quaternion_orientation_std_received_ && quaternion_orientation_received_
-	   && acceleration_received_ && angular_velocity_received_) {
+	   && acceleration_received_ && angular_velocity_received_ && raw_sensors_received_) {
 	  publish_imu_msg();
 	  quaternion_orientation_std_received_ = false;
 	  quaternion_orientation_received_ = false;
 	  acceleration_received_ = false;
 	  angular_velocity_received_ = false;
 	}
+	if(raw_sensors_received_) {
+	  publish_imu_raw_msg();
+	  publish_magnetics_msg();
+	  publish_temperature_msg();
+	  raw_sensors_received_ = false;
+	}
 
-	if(status_received_){
+	if(status_received_ && running_time_received_){
 	  diagnostic_.update();
 	  status_received_ = false;
+	  running_time_received_ = false;
 	}
       }
 
@@ -153,6 +177,14 @@ private:
 	    status_received_ = true;
 	  }
 	}
+	else if(an_packet->id == packet_id_running_time) {
+	  if(decode_running_time_packet(&running_time_packet_, an_packet) != 0) {
+	    ROS_WARN("Running time packet decode failure");
+	  }
+	  else{
+	    running_time_received_ = true;
+	  }
+	}
         else if(an_packet->id == packet_id_quaternion_orientation_standard_deviation) {
 	  if(decode_quaternion_orientation_standard_deviation_packet(&quaternion_std_packet_, an_packet) != 0) {
 	    ROS_WARN("Quaternion orientation standard deviation packet decode failure");
@@ -185,6 +217,14 @@ private:
 	    angular_velocity_received_ = true;
 	  }
 	}
+	else if(an_packet->id == packet_id_raw_sensors) {
+	  if(decode_raw_sensors_packet(&raw_sensors_packet_, an_packet) != 0) {
+	    ROS_WARN("Raw sensors packet decode failure");
+	  }
+	  else {
+	    raw_sensors_received_ = true;
+	  }
+	}
 	else {
 	  ROS_WARN("Unknown packet id: %d", an_packet->id);
 	}
@@ -204,6 +244,8 @@ private:
 
     status.add("Device", port_name_);
     status.add("TF frame", frame_id_);
+    double running_time = (1.0e-6) * running_time_packet_.microseconds + running_time_packet_.seconds;
+    status.add("Running time", running_time);
   }
   void accelerometerStatus(diagnostic_updater::DiagnosticStatusWrapper &status) {
     if(status_packet_.system_status.b.accelerometer_sensor_failure)
@@ -283,12 +325,58 @@ private:
     imu_msg.angular_velocity.x = angular_velocity_packet_.angular_velocity[0];
     imu_msg.angular_velocity.y = angular_velocity_packet_.angular_velocity[1];
     imu_msg.angular_velocity.z = angular_velocity_packet_.angular_velocity[2];
+    imu_msg.angular_velocity_covariance[0] = -1;
 
-    imu_msg.linear_acceleration.x = angular_velocity_packet_.angular_velocity[0];
-    imu_msg.linear_acceleration.y = angular_velocity_packet_.angular_velocity[1];
-    imu_msg.linear_acceleration.z = angular_velocity_packet_.angular_velocity[2];
+    imu_msg.linear_acceleration.x = acceleration_packet_.acceleration[0];
+    imu_msg.linear_acceleration.y = acceleration_packet_.acceleration[1];
+    imu_msg.linear_acceleration.z = acceleration_packet_.acceleration[2];
+    imu_msg.linear_acceleration_covariance[0] = -1;
 
     imu_pub_.publish(imu_msg);
+  }
+  void publish_imu_raw_msg() {
+    sensor_msgs::Imu imu_msg;
+    geometry_msgs::Vector3 angular_velocity;
+    geometry_msgs::Vector3 linear_acceleration;
+
+    imu_msg.header.stamp = ros::Time::now();
+    imu_msg.header.frame_id = frame_id_;
+
+    imu_msg.orientation_covariance[0] = -1;
+
+    imu_msg.angular_velocity.x = raw_sensors_packet_.gyroscopes[0];
+    imu_msg.angular_velocity.y = raw_sensors_packet_.gyroscopes[1];
+    imu_msg.angular_velocity.z = raw_sensors_packet_.gyroscopes[2];
+    imu_msg.angular_velocity_covariance[0] = -1;
+
+    imu_msg.linear_acceleration.x = raw_sensors_packet_.accelerometers[0];
+    imu_msg.linear_acceleration.y = raw_sensors_packet_.accelerometers[1];
+    imu_msg.linear_acceleration.z = raw_sensors_packet_.accelerometers[2];
+    imu_msg.linear_acceleration_covariance[0] = -1;
+
+    imu_raw_pub_.publish(imu_msg);
+  }
+  void publish_magnetics_msg() {
+    sensor_msgs::MagneticField magnetic_field_msg;
+
+    magnetic_field_msg.header.stamp = ros::Time::now();
+    magnetic_field_msg.header.frame_id = frame_id_;
+
+    magnetic_field_msg.magnetic_field.x = raw_sensors_packet_.magnetometers[0] * (1.0e-7);
+    magnetic_field_msg.magnetic_field.y = raw_sensors_packet_.magnetometers[1] * (1.0e-7);
+    magnetic_field_msg.magnetic_field.z = raw_sensors_packet_.magnetometers[2] * (1.0e-7);
+
+    magnetic_field_pub_.publish(magnetic_field_msg);
+  }
+  void publish_temperature_msg() {
+    sensor_msgs::Temperature temp_msg;
+
+    temp_msg.header.stamp = ros::Time::now();
+    temp_msg.header.frame_id = frame_id_;
+
+    temp_msg.temperature = raw_sensors_packet_.imu_temperature;
+
+    temperature_pub_.publish(temp_msg);
   }
 
 };
