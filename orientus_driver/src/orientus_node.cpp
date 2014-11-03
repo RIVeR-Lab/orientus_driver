@@ -40,6 +40,7 @@ private:
   raw_sensors_packet_t raw_sensors_packet_;
   status_packet_t status_packet_;
   running_time_packet_t running_time_packet_;
+  device_information_packet_t device_information_packet_;
   bool quaternion_orientation_std_received_;
   bool quaternion_orientation_received_;
   bool acceleration_received_;
@@ -47,6 +48,7 @@ private:
   bool raw_sensors_received_;
   bool status_received_;
   bool running_time_received_;
+  bool device_information_received_;
 
 public:
   OrientusNode(ros::NodeHandle nh, ros::NodeHandle pnh)
@@ -60,6 +62,12 @@ public:
     port_.set_option(boost::asio::serial_port_base::baud_rate(115200));
 
     an_packet_t *an_packet;
+    // Request device information
+    an_packet = encode_request_packet(packet_id_device_information);
+    an_packet_encode_and_send(an_packet);
+    an_packet_free(&an_packet);
+
+    // Setup packet rate timer
     packet_timer_period_packet_t packet_timer_period_packet;
     packet_timer_period_packet.permanent = 0;
     packet_timer_period_packet.packet_timer_period = 1000; // 1 ms
@@ -67,6 +75,7 @@ public:
     an_packet_encode_and_send(an_packet);
     an_packet_free(&an_packet);
 
+    // Configure packet rates
     packet_periods_packet_t packet_periods_packet;
     packet_periods_packet.permanent = 0;
     packet_periods_packet.clear_existing_packets = 1;
@@ -91,11 +100,15 @@ public:
     an_packet_encode_and_send(an_packet);
     an_packet_free(&an_packet);
 
+
+    // Setup ROS topic
     imu_pub_ = nh.advertise<sensor_msgs::Imu>("imu/data", 10);
     imu_raw_pub_ = nh.advertise<sensor_msgs::Imu>("imu/raw", 10);
     magnetic_field_pub_ = nh.advertise<sensor_msgs::MagneticField>("imu/mag", 10);
     temperature_pub_ = nh.advertise<sensor_msgs::Temperature>("imu/temp", 10);
 
+
+    // Setup diagnostics
     diagnostic_.setHardwareID("orientus");
     diagnostic_.add("IMU Status", this, &OrientusNode::deviceStatus);
     diagnostic_.add("Accelerometer Status", this, &OrientusNode::accelerometerStatus);
@@ -105,6 +118,7 @@ public:
     diagnostic_.add("Voltage Status", this, &OrientusNode::voltageStatus);
     diagnostic_.add("Filter Status", this, &OrientusNode::filterStatus);
 
+
     an_decoder_initialise(&an_decoder_);
 
     quaternion_orientation_std_received_ = false;
@@ -113,6 +127,7 @@ public:
     raw_sensors_received_ = false;
     status_received_ = false;
     running_time_received_ = false;
+    device_information_received_ = false;
   }
   void spin() {
     while (ros::ok()) {
@@ -132,7 +147,7 @@ public:
 	  raw_sensors_received_ = false;
 	}
 
-	if(status_received_ && running_time_received_){
+	if(status_received_ && running_time_received_ && device_information_received_){
 	  diagnostic_.update();
 	  status_received_ = false;
 	  running_time_received_ = false;
@@ -183,6 +198,14 @@ private:
 	  }
 	  else{
 	    running_time_received_ = true;
+	  }
+	}
+	else if(an_packet->id == packet_id_device_information) {
+	  if(decode_device_information_packet(&device_information_packet_, an_packet) != 0) {
+	    ROS_WARN("Device information decode failure");
+	  }
+	  else{
+	    device_information_received_ = true;
 	  }
 	}
         else if(an_packet->id == packet_id_quaternion_orientation_standard_deviation) {
@@ -246,6 +269,24 @@ private:
     status.add("TF frame", frame_id_);
     double running_time = (1.0e-6) * running_time_packet_.microseconds + running_time_packet_.seconds;
     status.add("Running time", running_time);
+    status.add("Device ID", device_information_packet_.device_id);
+
+    std::ostringstream software_version_stream;
+    software_version_stream << std::fixed << std::setprecision(3);
+    software_version_stream << device_information_packet_.software_version/1000.0;
+    status.add("Software Version", software_version_stream.str());
+
+    std::ostringstream hardware_revision_stream;
+    hardware_revision_stream << std::fixed << std::setprecision(3);
+    hardware_revision_stream << device_information_packet_.hardware_revision/1000.0;
+    status.add("Hardware Revision", hardware_revision_stream.str());
+
+    std::stringstream serial_number_stream;
+    serial_number_stream << std::hex << std::setfill('0') << std::setw(8);
+    serial_number_stream << device_information_packet_.serial_number[0];
+    serial_number_stream << device_information_packet_.serial_number[1];
+    serial_number_stream << device_information_packet_.serial_number[2];
+    status.add("Serial Number", serial_number_stream.str());
   }
   void accelerometerStatus(diagnostic_updater::DiagnosticStatusWrapper &status) {
     if(status_packet_.system_status.b.accelerometer_sensor_failure)
@@ -386,8 +427,12 @@ int main(int argc, char *argv[]) {
   ros::NodeHandle nh;
   ros::NodeHandle pnh("~");
 
-  OrientusNode node(nh, pnh);
-  node.spin();
+  try {
+    OrientusNode node(nh, pnh);
+    node.spin();
+  } catch(std::exception& e){
+    ROS_FATAL_STREAM("Exception thrown: " << e.what());
+  }
 
   return 0;
 
