@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>orientus_sdk_c</name>
-  <version>0.0.1</version>
+  <version>0.0.2</version>
   <description>The Orientus C SDK</description>
   <maintainer email="mwills@wpi.edu">Mitchell Wills</maintainer>
   <author>Nick Otero</author>

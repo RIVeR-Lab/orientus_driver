@@ -2,8 +2,8 @@
 Changelog for package orientus_sdk_c
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.2 (2014-11-02)
+------------------
 * Fixed include directory name and install
 * Contributors: Mitchell Wills
 

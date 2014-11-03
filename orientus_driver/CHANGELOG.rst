@@ -2,8 +2,8 @@
 Changelog for package orientus_driver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.2 (2014-11-02)
+------------------
 * Added device information
   Added ROS error when an exception is thrown
 * Added raw, temperature and magnetic outputs
