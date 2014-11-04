@@ -2,8 +2,8 @@
 Changelog for package orientus_sdk_c
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.3 (2014-11-03)
+------------------
 * Added website, issue tracker, and repository to package.xml
 * Contributors: Mitchell Wills
 
