@@ -9,6 +9,10 @@
   <url>http://wiki.ros.org/orientus_driver</url>
   <license>BSD</license>
 
+  <url type="website">http://wiki.ros.org/orientus_driver</url>
+  <url type="bugtracker">https://github.com/RIVeR-Lab/orientus_driver/issues</url>
+  <url type="repository">https://github.com/RIVeR-Lab/orientus_driver</url>
+
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>sensor_msgs</build_depend>

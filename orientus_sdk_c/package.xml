@@ -8,5 +8,9 @@
   <url>http://wiki.ros.org/orientus_sdk_c</url>
   <license>MIT</license>
 
+  <url type="website">http://wiki.ros.org/orientus_sdk_c</url>
+  <url type="bugtracker">https://github.com/RIVeR-Lab/orientus_driver/issues</url>
+  <url type="repository">https://github.com/RIVeR-Lab/orientus_driver</url>
+
   <buildtool_depend>catkin</buildtool_depend>
 </package>
